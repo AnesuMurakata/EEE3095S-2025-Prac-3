@@ -26,7 +26,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define MAX_ITER 100
+// #define MAX_ITER 1000  // Removed - now using array of values
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -70,15 +70,15 @@ uint32_t start_time;
 // Global end_time variable
 uint32_t end_time;
 
-// Arrays to store results for each image size
+// Arrays to store results for each MAX_ITER value
 uint32_t execution_times_fixed[5];
 uint32_t execution_times_double[5];
 uint64_t checksums_fixed[5];
 uint64_t checksums_double[5];
 
-// Global array for image sizes
-int image_sizes[] = {IMAGE_128, IMAGE_160, IMAGE_192, IMAGE_224, IMAGE_256};
-int num_sizes = 5;
+// Array of MAX_ITER values to test
+int max_iter_values[] = {100, 250, 500, 750, 1000};
+int num_iter_tests = 5;
 
 // Global counter for current test
 int current_test_index = 0;
@@ -130,13 +130,11 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
     MX_GPIO_Init();
     /* USER CODE BEGIN 2 */
 
-    // Test parameters
-    int max_iterations = MAX_ITER;
-
-    // Test all image sizes
-    for (int i = 0; i < num_sizes; i++) {
+    // Test different MAX_ITER values for IMAGE_128
+    for (int i = 0; i < num_iter_tests; i++) {
         current_test_index = i;  // Update global counter
-        int test_size = image_sizes[i];
+        int test_iterations = max_iter_values[i];
+        int test_size = IMAGE_128;  // Fixed image size
 
         // Test 1: Fixed Point Arithmetic
         // Turn on LED 0 to signify the start of the operation
@@ -146,7 +144,7 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
         start_time = HAL_GetTick();
 
         // Call the Mandelbrot Function and store the output in the checksum variable defined initially
-        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, max_iterations);
+        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, test_iterations);
 
         // Record the end time
         end_time = HAL_GetTick();
@@ -174,7 +172,7 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
         start_time = HAL_GetTick();
 
         // Call the Mandelbrot Function and store the output in the checksum variable defined initially
-        global_checksum = calculate_mandelbrot_double(test_size, test_size, max_iterations);
+        global_checksum = calculate_mandelbrot_double(test_size, test_size, test_iterations);
 
         // Record the end time
         end_time = HAL_GetTick();
@@ -194,7 +192,7 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-        // Small delay between different image sizes
+        // Small delay between different MAX_ITER values
         HAL_Delay(500);
     }
 
