@@ -70,15 +70,26 @@ uint32_t start_time;
 // Global end_time variable
 uint32_t end_time;
 
-// Arrays to store results for each MAX_ITER value
-uint32_t execution_times_fixed[5];
-uint32_t execution_times_double[5];
-uint64_t checksums_fixed[5];
-uint64_t checksums_double[5];
+// DWT cycle counter variables
+volatile uint32_t dwt_start_cycles;
+volatile uint32_t dwt_end_cycles;
+volatile uint32_t dwt_cycle_count;
 
-// Array of MAX_ITER values to test
-int max_iter_values[] = {100, 250, 500, 750, 1000};
-int num_iter_tests = 5;
+// Extended measurement arrays
+uint32_t wall_clock_fixed[5];     // Wall clock time for fixed-point
+uint32_t wall_clock_double[5];    // Wall clock time for double
+uint32_t cpu_cycles_fixed[5];     // CPU cycles for fixed-point
+uint32_t cpu_cycles_double[5];    // CPU cycles for double
+float throughput_fixed[5];        // Throughput for fixed-point
+float throughput_double[5];       // Throughput for double
+uint32_t total_pixels[5];         // Total pixels for each size
+uint64_t checksums_fixed[5];      // Checksums for fixed-point
+uint64_t checksums_double[5];     // Checksums for double
+
+// Image sizes array
+int image_sizes[] = {IMAGE_128, IMAGE_160, IMAGE_192, IMAGE_224, IMAGE_256};
+int num_sizes = 5;
+int max_iterations = 100;  // Fixed MAX_ITER = 100
 
 // Global counter for current test
 int current_test_index = 0;
@@ -91,6 +102,7 @@ static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
+void MX_DWT_Init(void);
 
 
 /* USER CODE END PFP */
@@ -130,29 +142,40 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
     MX_GPIO_Init();
     /* USER CODE BEGIN 2 */
 
-    // Test different MAX_ITER values for IMAGE_128
-    for (int i = 0; i < num_iter_tests; i++) {
-        current_test_index = i;  // Update global counter
-        int test_iterations = max_iter_values[i];
-        int test_size = IMAGE_128;  // Fixed image size
+    // Initialize DWT cycle counter
+    MX_DWT_Init();
+
+    // Test all image sizes with MAX_ITER = 100
+    for (int i = 0; i < num_sizes; i++) {
+        current_test_index = i;
+        int test_size = image_sizes[i];
+        total_pixels[i] = test_size * test_size;  // Calculate total pixels
 
         // Test 1: Fixed Point Arithmetic
         // Turn on LED 0 to signify the start of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
-        // Record the start time
+        // Wall clock time measurement
         start_time = HAL_GetTick();
 
-        // Call the Mandelbrot Function and store the output in the checksum variable defined initially
-        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, test_iterations);
+        // CPU cycle measurement
+        DWT->CYCCNT = 0;  // Reset cycle counter
+        dwt_start_cycles = DWT->CYCCNT;
 
-        // Record the end time
+        // Call the Mandelbrot Function
+        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, max_iterations);
+
+        // End measurements
+        dwt_end_cycles = DWT->CYCCNT;
+        dwt_cycle_count = dwt_end_cycles - dwt_start_cycles;
         end_time = HAL_GetTick();
 
-        // Calculate the execution time
+        // Calculate and store results
         execution_time = end_time - start_time;
-        execution_times_fixed[i] = execution_time;
+        wall_clock_fixed[i] = execution_time;
+        cpu_cycles_fixed[i] = dwt_cycle_count;
         checksums_fixed[i] = global_checksum;
+        throughput_fixed[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // pixels per second
 
         // Turn on LED 1 to signify the end of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
@@ -168,19 +191,27 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
         // Turn on LED 0 to signify the start of the second operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
-        // Record the start time
+        // Wall clock time measurement
         start_time = HAL_GetTick();
 
-        // Call the Mandelbrot Function and store the output in the checksum variable defined initially
-        global_checksum = calculate_mandelbrot_double(test_size, test_size, test_iterations);
+        // CPU cycle measurement
+        DWT->CYCCNT = 0;  // Reset cycle counter
+        dwt_start_cycles = DWT->CYCCNT;
 
-        // Record the end time
+        // Call the Mandelbrot Function
+        global_checksum = calculate_mandelbrot_double(test_size, test_size, max_iterations);
+
+        // End measurements
+        dwt_end_cycles = DWT->CYCCNT;
+        dwt_cycle_count = dwt_end_cycles - dwt_start_cycles;
         end_time = HAL_GetTick();
 
-        // Calculate the execution time
+        // Calculate and store results
         execution_time = end_time - start_time;
-        execution_times_double[i] = execution_time;
+        wall_clock_double[i] = execution_time;
+        cpu_cycles_double[i] = dwt_cycle_count;
         checksums_double[i] = global_checksum;
+        throughput_double[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // pixels per second
 
         // Turn on LED 1 to signify the end of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
@@ -192,7 +223,7 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-        // Small delay between different MAX_ITER values
+        // Small delay between different image sizes
         HAL_Delay(500);
     }
 
@@ -374,6 +405,16 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations){
         }
 
         return mandelbrot_sum;
+}
+
+// DWT Initialization Function
+void MX_DWT_Init(void) {
+    // Enable DWT counter
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    
+    // Reset counter
+    DWT->CYCCNT = 0;
 }
 
 /* USER CODE END 4 */

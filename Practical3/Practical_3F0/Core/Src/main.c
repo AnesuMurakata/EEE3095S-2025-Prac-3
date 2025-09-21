@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include "stm32f0xx.h"
+#include "core_cm0.h"  // For DWT access
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -86,6 +87,25 @@ int max_iter_values[5] = {100, 250, 500, 750, 1000};
 // Array to store image sizes being tested (using 128x128 for all tests)
 int image_sizes[5] = { IMAGE_128, IMAGE_128, IMAGE_128, IMAGE_128, IMAGE_128};
 
+// Task 3: Extended measurement variables
+// Wall clock time (ms)
+uint32_t wall_clock_fixed[5];
+uint32_t wall_clock_double[5];
+
+// CPU clock cycles
+uint32_t cpu_cycles_fixed[5];
+uint32_t cpu_cycles_double[5];
+
+// Throughput (pixels per second)
+float throughput_fixed[5];
+float throughput_double[5];
+
+// Image sizes for Task 3: 128, 160, 192, 224, 256
+int task3_image_sizes[5] = {128, 160, 192, 224, 256};
+
+// Helper variables for measurements
+uint32_t tick_start, tick_end;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,11 +115,80 @@ static void MX_GPIO_Init(void);
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
 
+// Task 3 helper functions
+void enable_dwt_cycle_counter(void);
+uint32_t get_system_clock_frequency(void);
+uint32_t get_dwt_cycles(void);
+float calculate_throughput(int width, int height, uint32_t wall_clock_ms);
+void measure_execution_metrics(int width, int height, int max_iter, 
+                              uint64_t (*mandelbrot_func)(int, int, int),
+                              uint32_t *wall_clock, uint32_t *cpu_cycles, 
+                              float *throughput, uint64_t *checksum);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// Task 3: Cycle counter functions for STM32F0
+// Note: STM32F0 doesn't have DWT, so we'll use SysTick for cycle counting
+// We'll estimate cycles based on system clock and execution time
+
+void enable_dwt_cycle_counter(void) {
+    // For STM32F0, we don't have DWT, so we'll use SysTick
+    // This is a placeholder - actual cycle counting will be done differently
+}
+
+// Function to get the actual system clock frequency
+uint32_t get_system_clock_frequency(void) {
+    // Get the actual system clock frequency from RCC
+    return HAL_RCC_GetSysClockFreq();
+}
+
+// Function to get estimated cycle count based on system clock
+uint32_t get_dwt_cycles(void) {
+    // For STM32F0, we'll estimate cycles based on actual system clock
+    uint32_t system_clock = get_system_clock_frequency();
+    
+    // Calculate cycles based on wall clock time
+    uint32_t wall_time_ms = tick_end - tick_start;
+    uint32_t estimated_cycles = (wall_time_ms * system_clock) / 1000;
+    
+    return estimated_cycles;
+}
+
+// Function to calculate throughput (pixels per second)
+float calculate_throughput(int width, int height, uint32_t wall_clock_ms) {
+    if (wall_clock_ms == 0) return 0.0f;
+    float total_pixels = (float)(width * height);
+    float time_seconds = (float)wall_clock_ms / 1000.0f;
+    return total_pixels / time_seconds;
+}
+
+// Function to measure execution with all metrics
+void measure_execution_metrics(int width, int height, int max_iter, 
+                              uint64_t (*mandelbrot_func)(int, int, int),
+                              uint32_t *wall_clock, uint32_t *cpu_cycles, 
+                              float *throughput, uint64_t *checksum) {
+    
+    // Measure wall clock time
+    tick_start = HAL_GetTick();
+    
+    // Execute Mandelbrot function
+    *checksum = mandelbrot_func(width, height, max_iter);
+    
+    // Stop measurements
+    tick_end = HAL_GetTick();
+    
+    // Calculate results
+    *wall_clock = tick_end - tick_start;
+    
+    // For STM32F0, estimate CPU cycles based on wall clock time
+    // This is an approximation since we don't have DWT
+    *cpu_cycles = get_dwt_cycles();
+    
+    *throughput = calculate_throughput(width, height, *wall_clock);
+}
 
 /* USER CODE END 0 */
 
@@ -133,55 +222,38 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
     MX_GPIO_Init();
     /* USER CODE BEGIN 2 */
     
-    // Test different MAX_ITER values systematically
-    for (int test_iter = 0; test_iter < 5; test_iter++) {
-        int current_max_iter = max_iter_values[test_iter];
-        int current_image_size = image_sizes[test_iter];
+    // Enable DWT cycle counter for Task 3
+    enable_dwt_cycle_counter();
+    
+    // Task 3: Extended execution time measurement
+    // MAX_ITER = 100, Image sizes: 128, 160, 192, 224, 256
+    for (int test_size = 0; test_size < 5; test_size++) {
+        int current_image_size = task3_image_sizes[test_size];
         
         // Test Fixed Point Arithmetic
-        // Turn on LED 0 to signify the start of fixed-point operation
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
         
-        // Record the start time
-        start_time = HAL_GetTick();
+        measure_execution_metrics(current_image_size, current_image_size, MAX_ITER,
+                                 calculate_mandelbrot_fixed_point_arithmetic,
+                                 &wall_clock_fixed[test_size],
+                                 &cpu_cycles_fixed[test_size],
+                                 &throughput_fixed[test_size],
+                                 &checksums_fixed[test_size]);
         
-        // Call the Mandelbrot Function and store the output in the checksum array
-        checksums_fixed[test_iter] = calculate_mandelbrot_fixed_point_arithmetic(
-            current_image_size, current_image_size, current_max_iter);
-        
-        // Record the end time
-        end_time = HAL_GetTick();
-        
-        // Calculate and store the execution time
-        execution_times_fixed[test_iter] = end_time - start_time;
-        
-        // Turn off LED 0
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-        
-        // Brief pause between tests
         HAL_Delay(200);
         
         // Test Double Arithmetic
-        // Turn on LED 1 to signify the start of double operation
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
         
-        // Record the start time
-        start_time = HAL_GetTick();
+        measure_execution_metrics(current_image_size, current_image_size, MAX_ITER,
+                                 calculate_mandelbrot_double,
+                                 &wall_clock_double[test_size],
+                                 &cpu_cycles_double[test_size],
+                                 &throughput_double[test_size],
+                                 &checksums_double[test_size]);
         
-        // Call the Mandelbrot Function and store the output in the checksum array
-        checksums_double[test_iter] = calculate_mandelbrot_double(
-            current_image_size, current_image_size, current_max_iter);
-        
-        // Record the end time
-        end_time = HAL_GetTick();
-        
-        // Calculate and store the execution time
-        execution_times_double[test_iter] = end_time - start_time;
-        
-        // Turn off LED 1
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-        
-        // Brief pause between different MAX_ITER tests
         HAL_Delay(200);
     }
     
