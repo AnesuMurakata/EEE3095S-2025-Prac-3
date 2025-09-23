@@ -128,6 +128,19 @@ uint32_t total_chunks_processed = 0;
 uint32_t current_chunk_x = 0;
 uint32_t current_chunk_y = 0;
 
+// Task 7: Fixed-point scaling factor testing
+// Scaling factors to test: 10^3, 10^4, 10^6
+int64_t scaling_factors[3] = {1000, 10000, 1000000};  // 10^3, 10^4, 10^6
+char* scaling_names[3] = {"10^3", "10^4", "10^6"};
+
+// Results for each scaling factor (15 total tests: 3 scaling factors × 5 image sizes)
+uint32_t task7_execution_times[15];    // 15 total tests
+uint64_t task7_checksums[15];          // 15 total tests
+uint32_t task7_overflow_counts[15];    // 15 total tests
+
+// Image sizes from Practical 1B (using current task3_image_sizes)
+int task7_image_sizes[5] = {128, 160, 192, 224, 256};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,6 +170,11 @@ uint64_t calculate_mandelbrot_chunk(int chunk_x, int chunk_y, int chunk_width, i
 uint64_t calculate_single_pixel_mandelbrot_fixed(int x, int y, int width, int height, int max_iter);
 uint64_t calculate_single_pixel_mandelbrot_double(int x, int y, int width, int height, int max_iter);
 void reset_chunk_counters(void);
+
+// Task 7 function prototypes
+uint64_t calculate_mandelbrot_fixed_point_with_scale(int width, int height, int max_iter, int64_t scale_factor, uint32_t* overflow_count);
+void test_scaling_factors(void);
+void analyze_scaling_results(void);
 
 /* USER CODE END PFP */
 
@@ -381,6 +399,99 @@ void process_image_in_chunks(int full_width, int full_height, int max_iter,
     *total_checksum = cumulative_checksum;
 }
 
+// Task 7: Fixed-point scaling factor testing functions
+
+// Calculate Mandelbrot with variable scaling factor
+uint64_t calculate_mandelbrot_fixed_point_with_scale(int width, int height, int max_iter, int64_t scale_factor, uint32_t* overflow_count) {
+    uint64_t mandelbrot_sum = 0;
+    *overflow_count = 0;
+    
+    // Pre-calculate scaled constants using variable scale factor
+    int64_t scaled_3_5 = 3 * scale_factor + (5 * scale_factor) / 10;  // 3.5 * SCALE
+    int64_t scaled_2_0 = 2 * scale_factor;                            // 2.0 * SCALE
+    int64_t scaled_2_5 = 2 * scale_factor + (5 * scale_factor) / 10;  // 2.5 * SCALE
+    int64_t scaled_1_0 = scale_factor;                                 // 1.0 * SCALE
+    int64_t scaled_4 = 4 * scale_factor;                              // 4 * SCALE
+    int64_t scaled_2 = 2 * scale_factor;                              // 2 * SCALE
+    
+    // Loop through each pixel
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // Calculate x0 = (x / width) * 3.5 - 2.5
+            int64_t x0 = ((x * scaled_3_5) / width) - scaled_2_5;
+            
+            // Calculate y0 = (y / height) * 2.0 - 1.0
+            int64_t y0 = ((y * scaled_2_0) / height) - scaled_1_0;
+            
+            // Initialize iteration variables
+            int64_t xi = 0;
+            int64_t yi = 0;
+            int iteration = 0;
+            
+            // Main iteration loop with overflow detection
+            while (iteration < max_iter && ((xi * xi + yi * yi) <= scaled_4)) {
+                // Check for potential overflow before calculations
+                if (xi > 0 && xi > (INT64_MAX / scale_factor)) {
+                    (*overflow_count)++;
+                    break;
+                }
+                if (yi > 0 && yi > (INT64_MAX / scale_factor)) {
+                    (*overflow_count)++;
+                    break;
+                }
+                
+                // temp = xi^2 - yi^2
+                int64_t temp = ((xi * xi) / scale_factor) - ((yi * yi) / scale_factor);
+                
+                // yi = 2 * xi * yi + y0
+                yi = ((scaled_2 * xi * yi) / scale_factor) + y0;
+                
+                // xi = temp + x0
+                xi = temp + x0;
+                
+                iteration++;
+            }
+            
+            mandelbrot_sum += iteration;
+        }
+    }
+    
+    return mandelbrot_sum;
+}
+
+// Test all scaling factors
+void test_scaling_factors(void) {
+    for (int scale_idx = 0; scale_idx < 3; scale_idx++) {
+        int64_t current_scale = scaling_factors[scale_idx];
+        
+        for (int size_idx = 0; size_idx < 5; size_idx++) {
+            int current_size = task7_image_sizes[size_idx];
+            
+            // Convert 2D indices to 1D index
+            int test_index = scale_idx * 5 + size_idx;
+            
+            // LED indication for progress
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+            
+            // Record start time
+            uint32_t start_time = HAL_GetTick();
+            
+            // Test with current scaling factor
+            uint32_t overflow_count = 0;
+            task7_checksums[test_index] = calculate_mandelbrot_fixed_point_with_scale(
+                current_size, current_size, MAX_ITER, current_scale, &overflow_count);
+            
+            // Record end time
+            uint32_t end_time = HAL_GetTick();
+            task7_execution_times[test_index] = end_time - start_time;
+            task7_overflow_counts[test_index] = overflow_count;
+            
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+            HAL_Delay(200);
+        }
+    }
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -489,6 +600,24 @@ void process_image_in_chunks(int full_width, int full_height, int max_iter,
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
     
     // Hold the LEDs on for 3s to show Task 4 completion
+    HAL_Delay(3000);
+    
+    // Turn off the LEDs
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    
+    // Task 7: Fixed-point scaling factor testing
+    // Test scaling factors: 10^3, 10^4, 10^6
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);  // Indicate Task 7 start
+    test_scaling_factors();
+    analyze_scaling_results();
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    
+    // All Task 7 tests completed - turn on both LEDs to indicate completion
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+    
+    // Hold the LEDs on for 3s to show Task 7 completion
     HAL_Delay(3000);
     
     // Turn off the LEDs
