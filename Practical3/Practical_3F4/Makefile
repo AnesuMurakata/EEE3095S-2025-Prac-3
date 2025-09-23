@@ -97,7 +97,7 @@ CPU = -mcpu=cortex-m4
 
 #TODO: FPU Enbale/Disable
 # fpu
-FPU = -mfpu=fpv4-sp-d16
+#FPU = -mfpu=fpv4-sp-d16
 
 # float-abi
 FLOAT-ABI = -mfloat-abi=hard

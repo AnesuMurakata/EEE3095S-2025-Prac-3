@@ -188,89 +188,78 @@ void reset_chunk_counters(void);
     MX_DWT_Init();
 
     // Test all image sizes with MAX_ITER = 100
-    // for (int i = 0; i < num_sizes; i++) {
-    //     current_test_index = i;
-    //     int test_size = image_sizes[i];
-    //     total_pixels[i] = test_size * test_size;  // Calculate total pixels
+    for (int i = 0; i < num_sizes; i++) {
+        current_test_index = i;
+        int test_size = image_sizes[i];
+        total_pixels[i] = test_size * test_size;  // Calculate total pixels
 
-    //     // Test 1: Fixed Point Arithmetic
-    //     // Turn on LED 0 to signify the start of the operation
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+        // Test 1: Fixed Point Arithmetic
+        // Turn on LED 0 to signify the start of the operation
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
-    //     // Wall clock time measurement
-    //     start_time = HAL_GetTick();
+        // Wall clock time measurement
+        start_time = HAL_GetTick();
 
-    //     // CPU cycle measurement
-    //     DWT->CYCCNT = 0;  // Reset cycle counter
-    //     dwt_start_cycles = DWT->CYCCNT;
+        // Call the Mandelbrot Function
+        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, max_iterations);
 
-    //     // Call the Mandelbrot Function
-    //     global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, max_iterations);
+        // End measurements
+        end_time = HAL_GetTick();
 
-    //     // End measurements
-    //     dwt_end_cycles = DWT->CYCCNT;
-    //     dwt_cycle_count = dwt_end_cycles - dwt_start_cycles;
-    //     end_time = HAL_GetTick();
+        // Calculate and store results
+        execution_time = end_time - start_time;
+        wall_clock_fixed[i] = execution_time;
+        // cpu_cycles_fixed[i] = dwt_cycle_count;  // Commented out - no cycle counting
+        checksums_fixed[i] = global_checksum;
+        // throughput_fixed[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // Commented out - no throughput
 
-    //     // Calculate and store results
-    //     execution_time = end_time - start_time;
-    //     wall_clock_fixed[i] = execution_time;
-    //     cpu_cycles_fixed[i] = dwt_cycle_count;
-    //     checksums_fixed[i] = global_checksum;
-    //     throughput_fixed[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // pixels per second
+        // Turn on LED 1 to signify the end of the operation
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
 
-    //     // Turn on LED 1 to signify the end of the operation
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+        // Hold the LEDs on for a 1s delay
+        HAL_Delay(1000);
 
-    //     // Hold the LEDs on for a 1s delay
-    //     HAL_Delay(1000);
+        // Turn off the LEDs
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-    //     // Turn off the LEDs
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+        // Test 2: Double Arithmetic
+        // Turn on LED 0 to signify the start of the second operation
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
-    //     // Test 2: Double Arithmetic
-    //     // Turn on LED 0 to signify the start of the second operation
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+        // Wall clock time measurement
+        start_time = HAL_GetTick();
 
-    //     // Wall clock time measurement
-    //     start_time = HAL_GetTick();
+        // Call the Mandelbrot Function
+        global_checksum = calculate_mandelbrot_double(test_size, test_size, max_iterations);
 
-    //     // CPU cycle measurement
-    //     DWT->CYCCNT = 0;  // Reset cycle counter
-    //     dwt_start_cycles = DWT->CYCCNT;
+        // End measurements
+        end_time = HAL_GetTick();
 
-    //     // Call the Mandelbrot Function
-    //     global_checksum = calculate_mandelbrot_double(test_size, test_size, max_iterations);
+        // Calculate and store results
+        execution_time = end_time - start_time;
+        wall_clock_double[i] = execution_time;
+        // cpu_cycles_double[i] = dwt_cycle_count;  // Commented out - no cycle counting
+        checksums_double[i] = global_checksum;
+        // throughput_double[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // Commented out - no throughput
 
-    //     // End measurements
-    //     dwt_end_cycles = DWT->CYCCNT;
-    //     dwt_cycle_count = dwt_end_cycles - dwt_start_cycles;
-    //     end_time = HAL_GetTick();
+        // Turn on LED 1 to signify the end of the operation
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
 
-    //     // Calculate and store results
-    //     execution_time = end_time - start_time;
-    //     wall_clock_double[i] = execution_time;
-    //     cpu_cycles_double[i] = dwt_cycle_count;
-    //     checksums_double[i] = global_checksum;
-    //     throughput_double[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // pixels per second
+        // Hold the LEDs on for a 1s delay
+        HAL_Delay(1000);
 
-    //     // Turn on LED 1 to signify the end of the operation
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+        // Turn off the LEDs
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-    //     // Hold the LEDs on for a 1s delay
-    //     HAL_Delay(1000);
-
-    //     // Turn off the LEDs
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-    //     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
-
-    //     // Small delay between different image sizes
-    //     HAL_Delay(500);
-    // }
+        // Small delay between different image sizes
+        HAL_Delay(500);
+    }
     
     // Task 4: Large image processing with chunking
     // Process images: 520x520, 1280x720, 1920x1080
+    /*
     for (int task4_test = 0; task4_test < 3; task4_test++) {
         int current_width = task4_image_widths[task4_test];
         int current_height = task4_image_heights[task4_test];
@@ -312,6 +301,7 @@ void reset_chunk_counters(void);
     // Turn off the LEDs
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+    */
 
     /* USER CODE END 2 */
 
