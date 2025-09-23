@@ -106,6 +106,28 @@ int task3_image_sizes[5] = {128, 160, 192, 224, 256};
 // Helper variables for measurements
 uint32_t tick_start, tick_end;
 
+// Task 4: Image splitting and processing variables
+// Image dimensions for Task 4: 520x520, 1280x720, 1920x1080
+int task4_image_widths[3] = {520, 1280, 1920};
+int task4_image_heights[3] = {520, 720, 1080};
+
+// Execution times for Task 4 (only wall clock time needed)
+uint32_t task4_execution_times_fixed[3];
+uint32_t task4_execution_times_double[3];
+
+// Checksums for Task 4
+uint64_t task4_checksums_fixed[3];
+uint64_t task4_checksums_double[3];
+
+// Chunking parameters
+#define MAX_CHUNK_SIZE 64  // 64x64 chunks for safety with 4KB SRAM
+#define CHUNK_OVERLAP 0    // No overlap needed for Mandelbrot
+
+// Chunk processing counters
+uint32_t total_chunks_processed = 0;
+uint32_t current_chunk_x = 0;
+uint32_t current_chunk_y = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,6 +146,17 @@ void measure_execution_metrics(int width, int height, int max_iter,
                               uint64_t (*mandelbrot_func)(int, int, int),
                               uint32_t *wall_clock, uint32_t *cpu_cycles, 
                               float *throughput, uint64_t *checksum);
+
+// Task 4 function prototypes
+void process_image_in_chunks(int full_width, int full_height, int max_iter, 
+                            uint64_t (*mandelbrot_func)(int, int, int),
+                            uint32_t *execution_time, uint64_t *total_checksum);
+uint64_t calculate_mandelbrot_chunk(int chunk_x, int chunk_y, int chunk_width, int chunk_height,
+                                   int full_width, int full_height, int max_iter,
+                                   uint64_t (*mandelbrot_func)(int, int, int));
+uint64_t calculate_single_pixel_mandelbrot_fixed(int x, int y, int width, int height, int max_iter);
+uint64_t calculate_single_pixel_mandelbrot_double(int x, int y, int width, int height, int max_iter);
+void reset_chunk_counters(void);
 
 /* USER CODE END PFP */
 
@@ -190,6 +223,164 @@ void measure_execution_metrics(int width, int height, int max_iter,
     *throughput = calculate_throughput(width, height, *wall_clock);
 }
 
+// Task 4: Image chunking and processing functions
+
+// Reset chunk processing counters
+void reset_chunk_counters(void) {
+    total_chunks_processed = 0;
+    current_chunk_x = 0;
+    current_chunk_y = 0;
+}
+
+// Calculate Mandelbrot for a single pixel using fixed-point arithmetic
+uint64_t calculate_single_pixel_mandelbrot_fixed(int x, int y, int width, int height, int max_iter) {
+    // Fixed-point scaling factor (10^6 as suggested in Appendix B)
+    const int64_t SCALE = 1000000;
+    
+    // Pre-calculate scaled constants
+    int64_t scaled_3_5 = 3 * SCALE + (5 * SCALE) / 10;  // 3.5 * SCALE
+    int64_t scaled_2_0 = 2 * SCALE;                      // 2.0 * SCALE
+    int64_t scaled_2_5 = 2 * SCALE + (5 * SCALE) / 10;  // 2.5 * SCALE
+    int64_t scaled_1_0 = SCALE;                          // 1.0 * SCALE
+    int64_t scaled_4 = 4 * SCALE;                        // 4 * SCALE
+    int64_t scaled_2 = 2 * SCALE;                        // 2 * SCALE
+    
+    // Calculate x0 = (x / width) * 3.5 - 2.5
+    int64_t x0 = ((x * scaled_3_5) / width) - scaled_2_5;
+    
+    // Calculate y0 = (y / height) * 2.0 - 1.0
+    int64_t y0 = ((y * scaled_2_0) / height) - scaled_1_0;
+    
+    // Initialize iteration variables
+    int64_t xi = 0;
+    int64_t yi = 0;
+    int iteration = 0;
+    
+    // Main iteration loop
+    while (iteration < max_iter && ((xi * xi + yi * yi) <= scaled_4)) {
+        // temp = xi^2 - yi^2
+        int64_t temp = ((xi * xi) / SCALE) - ((yi * yi) / SCALE);
+        
+        // yi = 2 * xi * yi + y0
+        yi = ((scaled_2 * xi * yi) / SCALE) + y0;
+        
+        // xi = temp + x0
+        xi = temp + x0;
+        
+        iteration++;
+    }
+    
+    return (uint64_t)iteration;
+}
+
+// Calculate Mandelbrot for a single pixel using double arithmetic
+uint64_t calculate_single_pixel_mandelbrot_double(int x, int y, int width, int height, int max_iter) {
+    // Calculate x0 = (x / width) * 3.5 - 2.5
+    double x0 = ((double)x / width) * 3.5 - 2.5;
+    
+    // Calculate y0 = (y / height) * 2.0 - 1.0
+    double y0 = ((double)y / height) * 2.0 - 1.0;
+    
+    // Initialize iteration variables
+    double xi = 0.0;
+    double yi = 0.0;
+    int iteration = 0;
+    
+    // Main iteration loop
+    while (iteration < max_iter && ((xi * xi + yi * yi) <= 4.0)) {
+        // temp = xi^2 - yi^2
+        double temp = xi * xi - yi * yi;
+        
+        // yi = 2 * xi * yi + y0
+        yi = 2.0 * xi * yi + y0;
+        
+        // xi = temp + x0
+        xi = temp + x0;
+        
+        iteration++;
+    }
+    
+    return (uint64_t)iteration;
+}
+
+// Calculate Mandelbrot for a specific chunk of the full image
+uint64_t calculate_mandelbrot_chunk(int chunk_x, int chunk_y, int chunk_width, int chunk_height,
+                                   int full_width, int full_height, int max_iter,
+                                   uint64_t (*mandelbrot_func)(int, int, int)) {
+    
+    uint64_t chunk_checksum = 0;
+    
+    // Process each pixel in the chunk
+    for (int local_y = 0; local_y < chunk_height; local_y++) {
+        for (int local_x = 0; local_x < chunk_width; local_x++) {
+            
+            // Convert local chunk coordinates to full image coordinates
+            int global_x = chunk_x + local_x;
+            int global_y = chunk_y + local_y;
+            
+            // Calculate Mandelbrot for this single pixel
+            uint64_t pixel_checksum;
+            if (mandelbrot_func == calculate_mandelbrot_fixed_point_arithmetic) {
+                pixel_checksum = calculate_single_pixel_mandelbrot_fixed(
+                    global_x, global_y, full_width, full_height, max_iter);
+            } else {
+                pixel_checksum = calculate_single_pixel_mandelbrot_double(
+                    global_x, global_y, full_width, full_height, max_iter);
+            }
+            
+            chunk_checksum += pixel_checksum;
+        }
+    }
+    
+    return chunk_checksum;
+}
+
+// Main function to process large images in chunks
+void process_image_in_chunks(int full_width, int full_height, int max_iter, 
+                            uint64_t (*mandelbrot_func)(int, int, int),
+                            uint32_t *execution_time, uint64_t *total_checksum) {
+    
+    uint32_t start_time = HAL_GetTick();
+    uint64_t cumulative_checksum = 0;
+    reset_chunk_counters();
+    
+    // Calculate number of chunks needed
+    int chunks_x = (full_width + MAX_CHUNK_SIZE - 1) / MAX_CHUNK_SIZE;
+    int chunks_y = (full_height + MAX_CHUNK_SIZE - 1) / MAX_CHUNK_SIZE;
+    
+    // Process image in chunks
+    for (int chunk_y = 0; chunk_y < chunks_y; chunk_y++) {
+        for (int chunk_x = 0; chunk_x < chunks_x; chunk_x++) {
+            
+            // Calculate chunk dimensions
+            int chunk_start_x = chunk_x * MAX_CHUNK_SIZE;
+            int chunk_start_y = chunk_y * MAX_CHUNK_SIZE;
+            int chunk_width = (chunk_start_x + MAX_CHUNK_SIZE > full_width) ? 
+                             (full_width - chunk_start_x) : MAX_CHUNK_SIZE;
+            int chunk_height = (chunk_start_y + MAX_CHUNK_SIZE > full_height) ? 
+                              (full_height - chunk_start_y) : MAX_CHUNK_SIZE;
+            
+            // Process this chunk
+            uint64_t chunk_checksum = calculate_mandelbrot_chunk(
+                chunk_start_x, chunk_start_y, chunk_width, chunk_height,
+                full_width, full_height, max_iter, mandelbrot_func);
+            
+            // Accumulate checksum
+            cumulative_checksum += chunk_checksum;
+            total_chunks_processed++;
+            
+            // Optional: LED indication for progress
+            if (total_chunks_processed % 10 == 0) {
+                HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0); // Blink LED every 10 chunks
+            }
+        }
+    }
+    
+    uint32_t end_time = HAL_GetTick();
+    *execution_time = end_time - start_time;
+    *total_checksum = cumulative_checksum;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -223,10 +414,11 @@ void measure_execution_metrics(int width, int height, int max_iter,
     /* USER CODE BEGIN 2 */
     
     // Enable DWT cycle counter for Task 3
-    enable_dwt_cycle_counter();
+    // enable_dwt_cycle_counter();
     
     // Task 3: Extended execution time measurement
     // MAX_ITER = 100, Image sizes: 128, 160, 192, 224, 256
+    /*
     for (int test_size = 0; test_size < 5; test_size++) {
         int current_image_size = task3_image_sizes[test_size];
         
@@ -263,6 +455,49 @@ void measure_execution_metrics(int width, int height, int max_iter,
     
     // Hold the LEDs on for 2s to show completion
     HAL_Delay(2000);
+    
+    // Turn off the LEDs
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    */
+    
+    // Task 4: Large image processing with chunking
+    // Process images: 520x520, 1280x720, 1920x1080
+    for (int task4_test = 0; task4_test < 3; task4_test++) {
+        int current_width = task4_image_widths[task4_test];
+        int current_height = task4_image_heights[task4_test];
+        
+        // Test Fixed Point Arithmetic
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+        
+        process_image_in_chunks(current_width, current_height, MAX_ITER,
+                               calculate_mandelbrot_fixed_point_arithmetic,
+                               &task4_execution_times_fixed[task4_test],
+                               &task4_checksums_fixed[task4_test]);
+        
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+        HAL_Delay(500);
+        
+        // Test Double Arithmetic
+        /*
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        
+        process_image_in_chunks(current_width, current_height, MAX_ITER,
+                               calculate_mandelbrot_double,
+                               &task4_execution_times_double[task4_test],
+                               &task4_checksums_double[task4_test]);
+        
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+        HAL_Delay(500);
+        */
+    }
+    
+    // All Task 4 tests completed - turn on both LEDs to indicate completion
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+    
+    // Hold the LEDs on for 3s to show Task 4 completion
+    HAL_Delay(3000);
     
     // Turn off the LEDs
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
