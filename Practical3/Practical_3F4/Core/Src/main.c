@@ -94,6 +94,12 @@ int max_iterations = 100;  // Fixed MAX_ITER = 100
 // Global counter for current test
 int current_test_index = 0;
 
+// Task 5: Float vs Double testing variables
+uint32_t task5_wall_clock_float[5];     // Wall clock time for float
+uint32_t task5_wall_clock_double[5];    // Wall clock time for double
+uint64_t task5_checksums_float[5];      // Checksums for float
+uint64_t task5_checksums_double[5];     // Checksums for double
+
 // Task 7: Fixed-point scaling factor testing
 // Scaling factors to test: 10^3, 10^4, 10^6
 int64_t scaling_factors[3] = {1000, 10000, 1000000};  // 10^3, 10^4, 10^6
@@ -148,6 +154,7 @@ static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
 uint64_t calculate_mandelbrot_fixed_point_arithmetic(int width, int height, int max_iterations);
 uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations);
+uint64_t calculate_mandelbrot_float(int width, int height, int max_iterations);
 void MX_DWT_Init(void);
 
 // Task 4 function prototypes
@@ -208,13 +215,14 @@ void analyze_scaling_results(void);
     // Initialize DWT cycle counter
     MX_DWT_Init();
 
+    // Task 5: Float vs Double testing
     // Test all image sizes with MAX_ITER = 100
     for (int i = 0; i < num_sizes; i++) {
         current_test_index = i;
         int test_size = image_sizes[i];
         total_pixels[i] = test_size * test_size;  // Calculate total pixels
 
-        // Test 1: Fixed Point Arithmetic
+        // Test 1: Float Arithmetic
         // Turn on LED 0 to signify the start of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
@@ -222,17 +230,15 @@ void analyze_scaling_results(void);
         start_time = HAL_GetTick();
 
         // Call the Mandelbrot Function
-        global_checksum = calculate_mandelbrot_fixed_point_arithmetic(test_size, test_size, max_iterations);
+        global_checksum = calculate_mandelbrot_float(test_size, test_size, max_iterations);
 
         // End measurements
         end_time = HAL_GetTick();
 
         // Calculate and store results
         execution_time = end_time - start_time;
-        wall_clock_fixed[i] = execution_time;
-        // cpu_cycles_fixed[i] = dwt_cycle_count;  // Commented out - no cycle counting
-        checksums_fixed[i] = global_checksum;
-        // throughput_fixed[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // Commented out - no throughput
+        task5_wall_clock_float[i] = execution_time;
+        task5_checksums_float[i] = global_checksum;
 
         // Turn on LED 1 to signify the end of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
@@ -244,8 +250,7 @@ void analyze_scaling_results(void);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-        // Test 2: Double Arithmetic - COMMENTED OUT
-        /*
+        // Test 2: Double Arithmetic
         // Turn on LED 0 to signify the start of the second operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
@@ -260,10 +265,8 @@ void analyze_scaling_results(void);
 
         // Calculate and store results
         execution_time = end_time - start_time;
-        wall_clock_double[i] = execution_time;
-        // cpu_cycles_double[i] = dwt_cycle_count;  // Commented out - no cycle counting
-        checksums_double[i] = global_checksum;
-        // throughput_double[i] = (float)total_pixels[i] / (execution_time / 1000.0f);  // Commented out - no throughput
+        task5_wall_clock_double[i] = execution_time;
+        task5_checksums_double[i] = global_checksum;
 
         // Turn on LED 1 to signify the end of the operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
@@ -274,7 +277,6 @@ void analyze_scaling_results(void);
         // Turn off the LEDs
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
-        */
 
         // Small delay between different image sizes
         HAL_Delay(500);
@@ -509,6 +511,50 @@ uint64_t calculate_mandelbrot_double(int width, int height, int max_iterations){
 
                     // yi = 2 * xi * yi + y0
                     yi = 2.0 * xi * yi + y0;
+
+                    // xi = temp + x0
+                    xi = temp + x0;
+
+                    iteration++;
+                }
+
+                // Add iteration count to checksum
+                mandelbrot_sum += iteration;
+            }
+        }
+
+        return mandelbrot_sum;
+}
+
+//TODO: Mandelbrot using variable type float
+uint64_t calculate_mandelbrot_float(int width, int height, int max_iterations){
+    uint64_t mandelbrot_sum = 0;
+    //TODO: Complete the function implementation
+
+        // Loop through each pixel (y coordinate)
+        for (int y = 0; y < height; y++) {
+            // Loop through each pixel (x coordinate)
+            for (int x = 0; x < width; x++) {
+                // Calculate x0 = (x / width) * 3.5 - 2.5
+                float x0 = ((float)x / width) * 3.5f - 2.5f;
+
+                // Calculate y0 = (y / height) * 2.0 - 1.0
+                float y0 = ((float)y / height) * 2.0f - 1.0f;
+
+                // Initialize iteration variables
+                float xi = 0.0f;
+                float yi = 0.0f;
+                int iteration = 0;
+
+                // Main iteration loop
+                while (iteration < max_iterations &&
+                       ((xi * xi + yi * yi) <= 4.0f)) {
+
+                    // temp = xi^2 - yi^2
+                    float temp = xi * xi - yi * yi;
+
+                    // yi = 2 * xi * yi + y0
+                    yi = 2.0f * xi * yi + y0;
 
                     // xi = temp + x0
                     xi = temp + x0;

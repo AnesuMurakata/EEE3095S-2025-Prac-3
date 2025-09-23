@@ -1,4 +1,4 @@
-ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 1
+ARM GAS  C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s 			page 1
 
 
    1              		.cpu cortex-m4
@@ -12,7 +12,7 @@ ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 1
    9              		.eabi_attribute 24, 1
   10              		.eabi_attribute 25, 1
   11              		.eabi_attribute 26, 1
-  12              		.eabi_attribute 30, 4
+  12              		.eabi_attribute 30, 1
   13              		.eabi_attribute 34, 1
   14              		.eabi_attribute 18, 4
   15              		.file	"stm32f4xx_hal_msp.c"
@@ -58,7 +58,7 @@ ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 1
   28:Core/Src/stm32f4xx_hal_msp.c **** /* USER CODE BEGIN TD */
   29:Core/Src/stm32f4xx_hal_msp.c **** 
   30:Core/Src/stm32f4xx_hal_msp.c **** /* USER CODE END TD */
-ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 2
+ARM GAS  C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s 			page 2
 
 
   31:Core/Src/stm32f4xx_hal_msp.c **** 
@@ -100,58 +100,53 @@ ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 1
   31              		@ args = 0, pretend = 0, frame = 8
   32              		@ frame_needed = 0, uses_anonymous_args = 0
   33              		@ link register save eliminated.
+  34 0000 82B0     		sub	sp, sp, #8
+  35              	.LCFI0:
+  36              		.cfi_def_cfa_offset 8
   65:Core/Src/stm32f4xx_hal_msp.c **** 
   66:Core/Src/stm32f4xx_hal_msp.c ****   /* USER CODE BEGIN MspInit 0 */
   67:Core/Src/stm32f4xx_hal_msp.c **** 
   68:Core/Src/stm32f4xx_hal_msp.c ****   /* USER CODE END MspInit 0 */
   69:Core/Src/stm32f4xx_hal_msp.c **** 
   70:Core/Src/stm32f4xx_hal_msp.c ****   __HAL_RCC_SYSCFG_CLK_ENABLE();
-  34              		.loc 1 70 3 view .LVU1
-  35              	.LBB2:
-  36              		.loc 1 70 3 view .LVU2
-  37              	.LBE2:
-  64:Core/Src/stm32f4xx_hal_msp.c **** 
-  38              		.loc 1 64 1 is_stmt 0 view .LVU3
-  39 0000 82B0     		sub	sp, sp, #8
-  40              	.LCFI0:
-  41              		.cfi_def_cfa_offset 8
-  42              	.LBB3:
-  43              		.loc 1 70 3 view .LVU4
-  44 0002 0C4B     		ldr	r3, .L2
-ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 3
+  37              		.loc 1 70 3 view .LVU1
+  38              	.LBB2:
+  39              		.loc 1 70 3 view .LVU2
+  40 0002 0021     		movs	r1, #0
+  41 0004 0091     		str	r1, [sp]
+  42              		.loc 1 70 3 view .LVU3
+  43 0006 0B4B     		ldr	r3, .L3
+  44 0008 5A6C     		ldr	r2, [r3, #68]
+  45 000a 42F48042 		orr	r2, r2, #16384
+ARM GAS  C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s 			page 3
 
 
-  45 0004 0021     		movs	r1, #0
-  46 0006 0091     		str	r1, [sp]
-  47              		.loc 1 70 3 is_stmt 1 view .LVU5
-  48 0008 5A6C     		ldr	r2, [r3, #68]
-  49 000a 42F48042 		orr	r2, r2, #16384
-  50 000e 5A64     		str	r2, [r3, #68]
-  51              		.loc 1 70 3 view .LVU6
-  52 0010 5A6C     		ldr	r2, [r3, #68]
-  53 0012 02F48042 		and	r2, r2, #16384
-  54 0016 0092     		str	r2, [sp]
-  55              		.loc 1 70 3 view .LVU7
-  56 0018 009A     		ldr	r2, [sp]
-  57              	.LBE3:
-  58              		.loc 1 70 3 view .LVU8
+  46 000e 5A64     		str	r2, [r3, #68]
+  47              		.loc 1 70 3 view .LVU4
+  48 0010 5A6C     		ldr	r2, [r3, #68]
+  49 0012 02F48042 		and	r2, r2, #16384
+  50 0016 0092     		str	r2, [sp]
+  51              		.loc 1 70 3 view .LVU5
+  52 0018 009A     		ldr	r2, [sp]
+  53              	.LBE2:
+  54              		.loc 1 70 3 view .LVU6
   71:Core/Src/stm32f4xx_hal_msp.c ****   __HAL_RCC_PWR_CLK_ENABLE();
+  55              		.loc 1 71 3 view .LVU7
+  56              	.LBB3:
+  57              		.loc 1 71 3 view .LVU8
+  58 001a 0191     		str	r1, [sp, #4]
   59              		.loc 1 71 3 view .LVU9
-  60              	.LBB4:
-  61              		.loc 1 71 3 view .LVU10
-  62 001a 0191     		str	r1, [sp, #4]
-  63              		.loc 1 71 3 view .LVU11
-  64 001c 1A6C     		ldr	r2, [r3, #64]
-  65 001e 42F08052 		orr	r2, r2, #268435456
-  66 0022 1A64     		str	r2, [r3, #64]
-  67              		.loc 1 71 3 view .LVU12
-  68 0024 1B6C     		ldr	r3, [r3, #64]
-  69 0026 03F08053 		and	r3, r3, #268435456
-  70 002a 0193     		str	r3, [sp, #4]
-  71              		.loc 1 71 3 view .LVU13
-  72 002c 019B     		ldr	r3, [sp, #4]
-  73              	.LBE4:
-  74              		.loc 1 71 3 view .LVU14
+  60 001c 1A6C     		ldr	r2, [r3, #64]
+  61 001e 42F08052 		orr	r2, r2, #268435456
+  62 0022 1A64     		str	r2, [r3, #64]
+  63              		.loc 1 71 3 view .LVU10
+  64 0024 1B6C     		ldr	r3, [r3, #64]
+  65 0026 03F08053 		and	r3, r3, #268435456
+  66 002a 0193     		str	r3, [sp, #4]
+  67              		.loc 1 71 3 view .LVU11
+  68 002c 019B     		ldr	r3, [sp, #4]
+  69              	.LBE3:
+  70              		.loc 1 71 3 view .LVU12
   72:Core/Src/stm32f4xx_hal_msp.c **** 
   73:Core/Src/stm32f4xx_hal_msp.c ****   /* System interrupt init*/
   74:Core/Src/stm32f4xx_hal_msp.c **** 
@@ -159,30 +154,30 @@ ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 1
   76:Core/Src/stm32f4xx_hal_msp.c **** 
   77:Core/Src/stm32f4xx_hal_msp.c ****   /* USER CODE END MspInit 1 */
   78:Core/Src/stm32f4xx_hal_msp.c **** }
-  75              		.loc 1 78 1 is_stmt 0 view .LVU15
-  76 002e 02B0     		add	sp, sp, #8
-  77              	.LCFI1:
-  78              		.cfi_def_cfa_offset 0
-  79              		@ sp needed
-  80 0030 7047     		bx	lr
-  81              	.L3:
-  82 0032 00BF     		.align	2
-  83              	.L2:
-  84 0034 00380240 		.word	1073887232
-  85              		.cfi_endproc
-  86              	.LFE134:
-  88              		.text
-  89              	.Letext0:
-  90              		.file 2 "C:\\ST\\STM32CubeIDE_1.19.0\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltool
-  91              		.file 3 "C:\\ST\\STM32CubeIDE_1.19.0\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltool
-  92              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
-ARM GAS  C:\Users\User\AppData\Local\Temp\cca899b8.s 			page 4
+  71              		.loc 1 78 1 is_stmt 0 view .LVU13
+  72 002e 02B0     		add	sp, sp, #8
+  73              	.LCFI1:
+  74              		.cfi_def_cfa_offset 0
+  75              		@ sp needed
+  76 0030 7047     		bx	lr
+  77              	.L4:
+  78 0032 00BF     		.align	2
+  79              	.L3:
+  80 0034 00380240 		.word	1073887232
+  81              		.cfi_endproc
+  82              	.LFE134:
+  84              		.text
+  85              	.Letext0:
+  86              		.file 2 "C:\\ST\\STM32CubeIDE_1.19.0\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltool
+  87              		.file 3 "C:\\ST\\STM32CubeIDE_1.19.0\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltool
+  88              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
+ARM GAS  C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s 			page 4
 
 
 DEFINED SYMBOLS
                             *ABS*:00000000 stm32f4xx_hal_msp.c
-C:\Users\User\AppData\Local\Temp\cca899b8.s:21     .text.HAL_MspInit:00000000 $t
-C:\Users\User\AppData\Local\Temp\cca899b8.s:27     .text.HAL_MspInit:00000000 HAL_MspInit
-C:\Users\User\AppData\Local\Temp\cca899b8.s:84     .text.HAL_MspInit:00000034 $d
+C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s:21     .text.HAL_MspInit:00000000 $t
+C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s:27     .text.HAL_MspInit:00000000 HAL_MspInit
+C:\Users\User\AppData\Local\Temp\ccMT5Ijd.s:80     .text.HAL_MspInit:00000034 $d
 
 NO UNDEFINED SYMBOLS
