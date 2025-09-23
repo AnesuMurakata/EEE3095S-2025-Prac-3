@@ -223,7 +223,8 @@ void reset_chunk_counters(void);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
 
-        // Test 2: Double Arithmetic
+        // Test 2: Double Arithmetic - COMMENTED OUT
+        /*
         // Turn on LED 0 to signify the start of the second operation
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
 
@@ -252,6 +253,7 @@ void reset_chunk_counters(void);
         // Turn off the LEDs
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+        */
 
         // Small delay between different image sizes
         HAL_Delay(500);

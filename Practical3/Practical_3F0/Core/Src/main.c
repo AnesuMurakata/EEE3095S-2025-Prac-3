@@ -108,16 +108,16 @@ uint32_t tick_start, tick_end;
 
 // Task 4: Image splitting and processing variables
 // Image dimensions for Task 4: 520x520, 1280x720, 1920x1080
-int task4_image_widths[3] = {520, 1280, 1920};
-int task4_image_heights[3] = {520, 720, 1080};
+// int task4_image_widths[3] = {520, 1280, 1920};
+// int task4_image_heights[3] = {520, 720, 1080};
 
 // Execution times for Task 4 (only wall clock time needed)
-uint32_t task4_execution_times_fixed[3];
-uint32_t task4_execution_times_double[3];
+uint32_t task4_execution_times_fixed[5];
+uint32_t task4_execution_times_double[5];
 
 // Checksums for Task 4
-uint64_t task4_checksums_fixed[3];
-uint64_t task4_checksums_double[3];
+uint64_t task4_checksums_fixed[5];
+uint64_t task4_checksums_double[5];
 
 // Chunking parameters
 #define MAX_CHUNK_SIZE 64  // 64x64 chunks for safety with 4KB SRAM
@@ -461,35 +461,27 @@ void process_image_in_chunks(int full_width, int full_height, int max_iter,
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
     */
     
-    // Task 4: Large image processing with chunking
-    // Process images: 520x520, 1280x720, 1920x1080
-    for (int task4_test = 0; task4_test < 3; task4_test++) {
-        int current_width = task4_image_widths[task4_test];
-        int current_height = task4_image_heights[task4_test];
+    // Task 4: Direct fixed-point arithmetic processing (no chunking)
+    // Process images: 128x128, 160x160, 192x192, 224x224, 256x256
+    for (int task4_test = 0; task4_test < 5; task4_test++) {
+        int current_size = task3_image_sizes[task4_test];
         
-        // Test Fixed Point Arithmetic
+        // Test Fixed Point Arithmetic - Direct processing
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
         
-        process_image_in_chunks(current_width, current_height, MAX_ITER,
-                               calculate_mandelbrot_fixed_point_arithmetic,
-                               &task4_execution_times_fixed[task4_test],
-                               &task4_checksums_fixed[task4_test]);
+        // Record start time
+        uint32_t start_time = HAL_GetTick();
+        
+        // Call Mandelbrot function directly
+        task4_checksums_fixed[task4_test] = calculate_mandelbrot_fixed_point_arithmetic(
+            current_size, current_size, MAX_ITER);
+        
+        // Record end time
+        uint32_t end_time = HAL_GetTick();
+        task4_execution_times_fixed[task4_test] = end_time - start_time;
         
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
         HAL_Delay(500);
-        
-        // Test Double Arithmetic
-        /*
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-        
-        process_image_in_chunks(current_width, current_height, MAX_ITER,
-                               calculate_mandelbrot_double,
-                               &task4_execution_times_double[task4_test],
-                               &task4_checksums_double[task4_test]);
-        
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-        HAL_Delay(500);
-        */
     }
     
     // All Task 4 tests completed - turn on both LEDs to indicate completion
